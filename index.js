@@ -55,7 +55,7 @@ app.get('/badge', async (req, res) => {
     axios.get(`https://gitlab.com/api/v4/users/${username}/projects?statistics=true${`${req.query.token !== undefined ? `&access_token=${req.query.token}` : ''}`}`)
     .then(response => {
         let date = formatDate(new Date(response.data.find(p => p.id === parseInt(req.query.id)).last_activity_at), parseInt(req.query.format));
-        
+
         let data = {
             projectId: response.data.find(p => p.id === parseInt(req.query.id)).id,
             commits: `${req.query.token === undefined ? response.data.length : response.data.find(p => p.id === parseInt(req.query.id)).statistics.commit_count}`,
@@ -75,6 +75,8 @@ app.get('/badge', async (req, res) => {
     })
 })
 
-let PORT = process.env.PORT | 4001;
+const port = process.env.PORT || 4001;
 
-app.listen(PORT);
+app.listen(port, () => {
+    console.log(`App listening on port ${port}`)
+});
