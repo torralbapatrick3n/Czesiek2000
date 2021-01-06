@@ -49,32 +49,67 @@ function formatDate(date, format) {
     }
 }
 
+function getUsers(id) {
+    return axios.get(`https://gitlab.com/api/v4/projects/${id}/users`)
+    .then(response => {
+        // console.log(response.data.length);
+        return response.data.length;
+    })
+}
+
+function commits(id) {
+    return axios.get(`https://gitlab.com/api/v4/projects/${id}/repository/commits?per_page=100`)
+    .then(response => {
+        this.response = response.data
+        return { commits: this.response.length, short_id: this.response[0].short_id };
+    })
+}
+
+app.get('/', (req, res) => {
+    res.send('<h1>Go to /badge to get badge informations </h1>');
+});
+
 app.get('/badge', async (req, res) => {
     let username = req.query.username;
    
-    axios.get(`https://gitlab.com/api/v4/users/${username}/projects?statistics=true${`${req.query.token !== undefined ? `&access_token=${req.query.token}` : ''}`}`)
+    axios.get(`https://gitlab.com/api/v4/users/${username}/projects?statistics=true${`${req.query.token !== undefined ? `&access_token=${req.query.token}` : ''}`}&per_page=100`)
     .then(response => {
-        let date = formatDate(new Date(response.data.find(p => p.id === parseInt(req.query.id)).last_activity_at), parseInt(req.query.format));
-
-        let data = {
-            projectId: response.data.find(p => p.id === parseInt(req.query.id)).id,
-            commits: `${req.query.token === undefined ? response.data.length : response.data.find(p => p.id === parseInt(req.query.id)).statistics.commit_count}`,
-            branch: response.data.find(p => p.id === parseInt(req.query.id)).default_branch,
-            forks: response.data.find(p => p.id === parseInt(req.query.id)).forks_count,
-            stars: response.data.find(p => p.id === parseInt(req.query.id)).star_count,
-            wiki: `${response.data.find(p => p.id === parseInt(req.query.id)).wiki_enabled ? 'enabled' : 'no wiki'}`,
-            topics: response.data.find(p => p.id === parseInt(req.query.id)).topics.length,
-            lastCommit: date,
-            repositorySize: `${req.query.token === undefined ? 'Cannot display this value, you need to specify access token in query string' : response.data.find(p => p.id === parseInt(req.query.id)).statistics.repository_size / 1000000 } MB`,
-            storageSize: `${req.query.token === undefined ? 'Cannot display this value, you need to specify access token in query string' : response.data.find(p => p.id === parseInt(req.query.id)).statistics.storage_size / 1000000 } MB`,
-            snippetsSize: `${req.query.token === undefined ? 'Cannot display this value, you need to specify access token in query string' : response.data.find(p => p.id === parseInt(req.query.id)).statistics.snippets_size / 1000000 } MB`,
-            jobArtifacts: `${req.query.token === undefined ? 'Cannot display this value, you need to specify access token in query string' : response.data.find(p => p.id === parseInt(req.query.id)).statistics.job_artifacts_size / 1000000 } MB`,
-            licence: `${req.query.licence === undefined ? 'Specify licence in url to use it' : req.query.licence}`
+        if (response.data.length === 0) {
+            res.send('<h1>User not found</h1>');
+        }else {
+            if(response.data.find(p => p.id === parseInt(req.query.id)) === undefined) {
+                return res.send('<h1>Project not found</h1>');
+            }
+            let date = formatDate(new Date(response.data.find(p => p.id === parseInt(req.query.id)).last_activity_at), parseInt(req.query.format));
+            getUsers(req.query.id).then(users => {
+                commits(response.data.find(p => p.id === parseInt(req.query.id)).id).then(r => {
+                    let data = {
+                        projectId: response.data.find(p => p.id === parseInt(req.query.id)).id,
+                        short_id: r.short_id,
+                        commits: `${req.query.token === undefined ? parseInt(r.commits) : parseInt(response.data.find(p => p.id === parseInt(req.query.id)).statistics.commit_count)}`,
+                        branch: response.data.find(p => p.id === parseInt(req.query.id)).default_branch,
+                        forks: response.data.find(p => p.id === parseInt(req.query.id)).forks_count,
+                        stars: response.data.find(p => p.id === parseInt(req.query.id)).star_count,
+                        wiki: `${response.data.find(p => p.id === parseInt(req.query.id)).wiki_enabled ? 'enabled' : 'no wiki'}`,
+                        topics: response.data.find(p => p.id === parseInt(req.query.id)).topics.length,
+                        lastCommit: date,
+                        repositorySize: `${req.query.token === undefined ? 'Cannot display this value, you need to specify access token in query string' : response.data.find(p => p.id === parseInt(req.query.id)).statistics.repository_size / 1000000 } MB`,
+                        storageSize: `${req.query.token === undefined ? 'Cannot display this value, you need to specify access token in query string' : response.data.find(p => p.id === parseInt(req.query.id)).statistics.storage_size / 1000000 } MB`,
+                        snippetsSize: `${req.query.token === undefined ? 'Cannot display this value, you need to specify access token in query string' : response.data.find(p => p.id === parseInt(req.query.id)).statistics.snippets_size / 1000000 } MB`,
+                        jobArtifacts: `${req.query.token === undefined ? 'Cannot display this value, you need to specify access token in query string' : response.data.find(p => p.id === parseInt(req.query.id)).statistics.job_artifacts_size / 1000000 } MB`,
+                        licence: `${req.query.licence === undefined ? 'Specify licence in url to use it' : req.query.licence}`,
+                        contributors: users
+                    }
+                    res.send(data);
+                });
+            });
         }
-        res.send(data)
     })
+    .catch(error => {
+        res.send({ error: error.response.status, message: 'User or project not found' });
+    });
 })
-
+    
 const port = process.env.PORT || 4001;
 
 app.listen(port, () => {
