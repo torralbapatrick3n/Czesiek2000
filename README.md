@@ -19,7 +19,8 @@ It will return json object
     "storageSize": "48.587778 MB", // need token for this
     "snippetsSize": "0 MB", // need token for this
     "jobArtifacts": "36.560612 MB", // need token for this
-    "licence": "MIT" // need specify in url
+    "licence": "MIT", // need specify in url
+    "contributors": "1", // need token for this
 }
 ```
 
