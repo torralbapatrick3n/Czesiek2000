@@ -1,5 +1,6 @@
 const express = require('express');
 const axios = require('axios');
+const path = require('path');
 
 const app = express();
 
@@ -93,12 +94,14 @@ app.get('/badge', async (req, res) => {
                         wiki: `${response.data.find(p => p.id === parseInt(req.query.id)).wiki_enabled ? 'enabled' : 'no wiki'}`,
                         topics: response.data.find(p => p.id === parseInt(req.query.id)).topics.length,
                         lastCommit: date,
-                        repositorySize: `${req.query.token === undefined ? 'Cannot display this value, you need to specify access token in query string' : response.data.find(p => p.id === parseInt(req.query.id)).statistics.repository_size / 1000000 } MB`,
-                        storageSize: `${req.query.token === undefined ? 'Cannot display this value, you need to specify access token in query string' : response.data.find(p => p.id === parseInt(req.query.id)).statistics.storage_size / 1000000 } MB`,
-                        snippetsSize: `${req.query.token === undefined ? 'Cannot display this value, you need to specify access token in query string' : response.data.find(p => p.id === parseInt(req.query.id)).statistics.snippets_size / 1000000 } MB`,
-                        jobArtifacts: `${req.query.token === undefined ? 'Cannot display this value, you need to specify access token in query string' : response.data.find(p => p.id === parseInt(req.query.id)).statistics.job_artifacts_size / 1000000 } MB`,
+                        repositorySize: `${req.query.token === undefined ? 'Cannot display this value, you need to specify access token in query string' : (response.data.find(p => p.id === parseInt(req.query.id)).statistics.repository_size / 1000000).toFixed(2) } MB`,
+                        storageSize: `${req.query.token === undefined ? 'Cannot display this value, you need to specify access token in query string' : (response.data.find(p => p.id === parseInt(req.query.id)).statistics.storage_size / 1000000).toFixed(2) } MB`,
+                        snippetsSize: `${req.query.token === undefined ? 'Cannot display this value, you need to specify access token in query string' : (response.data.find(p => p.id === parseInt(req.query.id)).statistics.snippets_size / 1000000).toFixed(2) } MB`,
+                        jobArtifacts: `${req.query.token === undefined ? 'Cannot display this value, you need to specify access token in query string' : (response.data.find(p => p.id === parseInt(req.query.id)).statistics.job_artifacts_size / 1000000).toFixed(2) } MB`,
                         licence: `${req.query.licence === undefined ? 'Specify licence in url to use it' : req.query.licence}`,
-                        contributors: users
+                        contributors: users,
+                        createdAt: formatDate(new Date(response.data.find(p => p.id === parseInt(req.query.id)).created_at), parseInt(req.query.format)),
+                        version: req.query.version
                     }
                     res.send(data);
                 });
@@ -109,6 +112,10 @@ app.get('/badge', async (req, res) => {
         res.send({ error: error.response.status, message: 'User or project not found' });
     });
 })
+
+app.get('/generate', (req, res) => {
+    res.sendFile(path.join(__dirname, 'public/index.html'));
+});
     
 const port = process.env.PORT || 4001;
 

@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Generate badge</title>
+    <style>
+        .form {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            margin: 10px auto;
+        }
+
+        .form input {
+            margin: 10px;
+            padding: 7px;
+        }
+
+        .hidden {
+            display: flex;
+            align-items: center;
+        }
+    </style>
+</head>
+<body>
+    <form class="form">
+        <label for="name">Pass username</label>
+        <input type="text" class="username" placeholder="Your username">
+       
+        <label for="name">Pass project id</label>
+        <input type="text" class="id" placeholder="Project id">
+        
+        <label for="name">Pass label</label>
+        <input type="text" class="label" placeholder="Label name">
+        
+        <label for="name">Pass query</label>
+        <input type="text" class="query" placeholder="Query value">
+        
+        <label for="name">Pass color</label>
+        <input type="text" class="color" placeholder="Shield color">
+        
+        <label for="name">Pass token</label>
+        <input type="text" class="token" placeholder="Private token">
+
+        <div class="hidden">
+            <label for="licence">licence</label>
+            <input type="text" name="licenceField" id="licenceField" style="display: none;">
+            <input type="checkbox" name="licence" id="licence">
+        </div>
+        <div class="hidden">
+            <label for="licence">Date format</label>
+            <input type="text" name="date" id="date" style="display: none;">
+            <input type="checkbox" name="dataFormat" id="dateFormat">
+        </div>
+
+        <input type="submit" value="Submit">
+    </form>
+
+    <script>
+        let username = document.querySelector('.username');
+        let label = document.querySelector('.label');
+        let query = document.querySelector('.query');
+        let color = document.querySelector('.color');
+        let id = document.querySelector('.id');
+        let token = document.querySelector('.token');
+        document.querySelectorAll('input[type="checkbox"]').forEach(i => i.addEventListener('click', () => {
+            
+            if (document.getElementById('licence').checked) {
+                document.getElementById('licenceField').style.display = 'block';
+            }else {
+                document.getElementById('licenceField').style.display = 'none';
+            }
+
+            if (document.getElementById('dateFormat').checked) {
+                document.getElementById('date').style.display = 'block';
+            }else {
+                document.getElementById('date').style.display = 'none';
+            }
+
+        }));
+
+        document.querySelector('.form').addEventListener('submit', (e) => {
+            e.preventDefault();
+            let url = `https://gitlab-badges-info.herokuapp.com/badge?id=${id.value}&username=${username.value}${token.value.length > 0 ? `&token=${token.value}` : ''}${document.getElementById('licenceField').value.length > 0 ? `&licence=${document.getElementById('licenceField').value}` : ''}${document.getElementById('date').value.length > 0 ? `&format=${document.getElementById('date').value}` : ''}`;
+            console.log(url);
+            let baseShields = `https://img.shields.io/badge/dynamic/json?`;
+            let finalUrl = `${baseShields}color=${color.value}&label=${label.value}&query=${query.value}&url=${encodeURIComponent(url)}`;
+            console.log(finalUrl);
+            window.open(finalUrl, '_blank').focus();
+        })
+    </script>
+</body>
+</html>
