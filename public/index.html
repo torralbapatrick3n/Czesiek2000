@@ -26,6 +26,7 @@
     </style>
 </head>
 <body>
+    <h1 style="text-align: center;">Generate badge</h1>
     <form class="form">
         <label for="name">Pass username</label>
         <input type="text" class="username" placeholder="Your username">
@@ -41,6 +42,15 @@
         
         <label for="name">Pass color</label>
         <input type="text" class="color" placeholder="Shield color">
+
+        <label for="type">Shield type</label>
+        <select name="shieldType" id="shieldType">
+            <option value="plastic" selected>Plastic</option>
+            <option value="flat">Flat</option>
+            <option value="flat-square">Flat square</option>
+            <option value="social">Social</option>
+            <option value="for-the-badge">For the badge</option>
+        </select>
         
         <label for="name">Pass token</label>
         <input type="text" class="token" placeholder="Private token">
@@ -57,15 +67,18 @@
         </div>
 
         <input type="submit" value="Submit">
+        <img alt="badge" id="badge">
     </form>
 
     <script>
-        let username = document.querySelector('.username');
-        let label = document.querySelector('.label');
-        let query = document.querySelector('.query');
-        let color = document.querySelector('.color');
-        let id = document.querySelector('.id');
-        let token = document.querySelector('.token');
+        const username = document.querySelector('.username');
+        const label = document.querySelector('.label');
+        const query = document.querySelector('.query');
+        const color = document.querySelector('.color');
+        const id = document.querySelector('.id');
+        const token = document.querySelector('.token');
+        const type = document.getElementById('shieldType');
+
         document.querySelectorAll('input[type="checkbox"]').forEach(i => i.addEventListener('click', () => {
             
             if (document.getElementById('licence').checked) {
@@ -81,15 +94,34 @@
             }
 
         }));
-
+        
+        let style = 'plastic';
+        
         document.querySelector('.form').addEventListener('submit', (e) => {
             e.preventDefault();
             let url = `https://gitlab-badges-info.herokuapp.com/badge?id=${id.value}&username=${username.value}${token.value.length > 0 ? `&token=${token.value}` : ''}${document.getElementById('licenceField').value.length > 0 ? `&licence=${document.getElementById('licenceField').value}` : ''}${document.getElementById('date').value.length > 0 ? `&format=${document.getElementById('date').value}` : ''}`;
             console.log(url);
             let baseShields = `https://img.shields.io/badge/dynamic/json?`;
-            let finalUrl = `${baseShields}color=${color.value}&label=${label.value}&query=${query.value}&url=${encodeURIComponent(url)}`;
+            let finalUrl = `${baseShields}color=${color.value}&label=${label.value}&style=${style}&query=${query.value}&url=${encodeURIComponent(url)}`;
             console.log(finalUrl);
             window.open(finalUrl, '_blank').focus();
+        })
+
+        
+        let shieldsUrl = `https://img.shields.io/badge/dynamic/json?color=${color.value}&label=${label.value}&style=${style}&query=${query.value}&url=${encodeURIComponent(`https://gitlab-badges-info.herokuapp.com/badge?id=${id.value}&username=${username.value}${token.value.length > 0 ? `&token=${token.value}` : ''}${document.getElementById('licenceField').value.length > 0 ? `&licence=${document.getElementById('licenceField').value}` : ''}${document.getElementById('date').value.length > 0 ? `&format=${document.getElementById('date').value}` : ''}`)}`;
+        
+        document.querySelectorAll('input[type="text"]').forEach(i => i.addEventListener('input', (e) => updateShield(e)));
+        
+        function updateShield(e){
+            shieldsUrl = `https://img.shields.io/badge/dynamic/json?color=${color.value}&label=${label.value}&style=${style}&query=${query.value}&url=${encodeURIComponent(`https://gitlab-badges-info.herokuapp.com/badge?id=${id.value}&username=${username.value}${token.value.length > 0 ? `&token=${token.value}` : ''}${document.getElementById('licenceField').value.length > 0 ? `&licence=${document.getElementById('licenceField').value}` : ''}${document.getElementById('date').value.length > 0 ? `&format=${document.getElementById('date').value}` : ''}`)}`;
+            document.getElementById('badge').src = shieldsUrl;
+            console.log(shieldsUrl);
+        }
+
+        type.addEventListener('change', (e) => {
+            style = e.target.value;
+            shieldsUrl = `https://img.shields.io/badge/dynamic/json?color=${color.value}&label=${label.value}&style=${style}&query=${query.value}&url=${encodeURIComponent(`https://gitlab-badges-info.herokuapp.com/badge?id=${id.value}&username=${username.value}${token.value.length > 0 ? `&token=${token.value}` : ''}${document.getElementById('licenceField').value.length > 0 ? `&licence=${document.getElementById('licenceField').value}` : ''}${document.getElementById('date').value.length > 0 ? `&format=${document.getElementById('date').value}` : ''}`)}`;
+            document.getElementById('badge').src = shieldsUrl;
         })
     </script>
 </body>
