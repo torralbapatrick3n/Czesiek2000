@@ -50,20 +50,21 @@ function formatDate(date, format) {
     }
 }
 
-function getUsers(id) {
-    return axios.get(`https://gitlab.com/api/v4/projects/${id}/users`)
-    .then(response => {
-        // console.log(response.data.length);
-        return response.data.length;
-    })
+async function getUsers(id, token) {
+    const res = await axios.get(`https://gitlab.com/api/v4/projects/${id}/users?access_token=${token}`)
+    const json = await res.data;
+    return json;
 }
 
-function commits(id) {
-    return axios.get(`https://gitlab.com/api/v4/projects/${id}/repository/commits?per_page=100`)
-    .then(response => {
-        this.response = response.data
-        return { commits: this.response.length, short_id: this.response[0].short_id };
-    })
+async function commits(id, token) {
+    const response = await axios.get(`https://gitlab.com/api/v4/projects/${id}/repository/commits?per_page=100&access_token=${token}`)
+    const json = await response.data.reduce(j => j);
+    return json;
+}
+
+async function getPipelines(id, token) {
+    return axios.get(`https://gitlab.com/api/v4/projects/${id}/pipelines?per_page=100&access_token=${token}`)
+    .then(response => response.data);
 }
 
 app.get('/', (req, res) => {
@@ -72,45 +73,58 @@ app.get('/', (req, res) => {
 
 app.get('/badge', async (req, res) => {
     let username = req.query.username;
-   
+    let id = req.query.id;
+    let token = req.query.token;
+    
+
     axios.get(`https://gitlab.com/api/v4/users/${username}/projects?statistics=true${`${req.query.token !== undefined ? `&access_token=${req.query.token}` : ''}`}&per_page=100`)
     .then(response => {
+        let project = response.data.filter(p => p.id == req.query.id);
+        
         if (response.data.length === 0) {
             res.send('<h1>User not found</h1>');
         }else {
             if(response.data.find(p => p.id === parseInt(req.query.id)) === undefined) {
                 return res.send('<h1>Project not found</h1>');
             }
+            project = project.reduce(j => j);
             let date = formatDate(new Date(response.data.find(p => p.id === parseInt(req.query.id)).last_activity_at), parseInt(req.query.format));
-            getUsers(req.query.id).then(users => {
-                commits(response.data.find(p => p.id === parseInt(req.query.id)).id).then(r => {
-                    let data = {
-                        projectId: response.data.find(p => p.id === parseInt(req.query.id)).id,
-                        short_id: r.short_id,
-                        commits: `${req.query.token === undefined ? parseInt(r.commits) : parseInt(response.data.find(p => p.id === parseInt(req.query.id)).statistics.commit_count)}`,
-                        branch: response.data.find(p => p.id === parseInt(req.query.id)).default_branch,
-                        forks: response.data.find(p => p.id === parseInt(req.query.id)).forks_count,
-                        stars: response.data.find(p => p.id === parseInt(req.query.id)).star_count,
-                        wiki: `${response.data.find(p => p.id === parseInt(req.query.id)).wiki_enabled ? 'enabled' : 'no wiki'}`,
-                        topics: response.data.find(p => p.id === parseInt(req.query.id)).topics.length,
-                        lastCommit: date,
-                        repositorySize: `${req.query.token === undefined ? 'Cannot display this value, you need to specify access token in query string' : (response.data.find(p => p.id === parseInt(req.query.id)).statistics.repository_size / 1000000).toFixed(2) } MB`,
-                        storageSize: `${req.query.token === undefined ? 'Cannot display this value, you need to specify access token in query string' : (response.data.find(p => p.id === parseInt(req.query.id)).statistics.storage_size / 1000000).toFixed(2) } MB`,
-                        snippetsSize: `${req.query.token === undefined ? 'Cannot display this value, you need to specify access token in query string' : (response.data.find(p => p.id === parseInt(req.query.id)).statistics.snippets_size / 1000000).toFixed(2) } MB`,
-                        jobArtifacts: `${req.query.token === undefined ? 'Cannot display this value, you need to specify access token in query string' : (response.data.find(p => p.id === parseInt(req.query.id)).statistics.job_artifacts_size / 1000000).toFixed(2) } MB`,
-                        licence: `${req.query.licence === undefined ? 'Specify licence in url to use it' : req.query.licence}`,
-                        contributors: users,
-                        createdAt: formatDate(new Date(response.data.find(p => p.id === parseInt(req.query.id)).created_at), parseInt(req.query.format)),
-                        version: req.query.version
-                    }
-                    res.send(data);
-                });
-            });
+
+            getUsers(project.id, req.query.token).then(u => {
+                commits(project.id, req.query.token).then(c => {
+                    axios.get(`https://gitlab.com/api/v4/projects/${project.id}/pipelines?access_token=${req.query.token}`)
+                    .then(p => {
+                        let data = {
+                            id: project.id,
+                            shortId: c.short_id,
+                            commitCount: c.commits,
+                            branch: project.default_branch,
+                            stars: project.star_count,
+                            topics: project.topics.length,
+                            forks: project.forks_count,
+                            wiki: project.wiki_enabled ? 'Enabled' : 'No wiki',
+                            lastCommit: date,
+                            createdAt: formatDate(new Date(response.data.find(p => p.id === parseInt(req.query.id)).created_at), parseInt(req.query.format)),
+                            repositorySize: `${req.query.token === undefined ? 'No authorize cannot display this value, you need to specify access token in query string' : (response.data.find(p => p.id === parseInt(req.query.id)).statistics.repository_size / 1000000).toFixed(2) } MB`,
+                            storageSize: `${req.query.token === undefined ? 'No authorize cannot display this value, you need to specify access token in query string' : (response.data.find(p => p.id === parseInt(req.query.id)).statistics.storage_size / 1000000).toFixed(2) } MB`,
+                            snippetsSize: `${req.query.token === undefined ? 'No authorize cannot display this value, you need to specify access token in query string' : (response.data.find(p => p.id === parseInt(req.query.id)).statistics.snippets_size / 1000000).toFixed(2) } MB`,
+                            jobArtifacts: `${req.query.token === undefined ? 'No authorize cannot display this value, you need to specify access token in query string' : (response.data.find(p => p.id === parseInt(req.query.id)).statistics.job_artifacts_size / 1000000).toFixed(2) } MB`,
+                            totalPipelines: p.data.length,
+                            latestPipelineStatus: p.data.reduce(j => j).status,
+                            contributors: u.length,
+                            repositoryUrl: project.http_url_to_repo,
+                            version: req.query.licence,
+                        }
+                        res.send(data);
+                    })
+                })
+            })
+            
         }
     })
-    .catch(error => {
-        res.send({ error: error.response.status, message: 'User or project not found' });
-    });
+    // .catch(error => {
+    //     res.send({ error: error.response.status, message: 'User or project not found' });
+    // });
 })
 
 app.get('/generate', (req, res) => {
